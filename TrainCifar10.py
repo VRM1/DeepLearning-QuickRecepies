@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
 from Model import Resnet5
-from Utils import progress_bar
+# from Utils import progress_bar
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
@@ -25,7 +25,7 @@ def Train(m_name):
 
     n_classes = 10
     if m_name == 'Restnet5':
-        model = Resnet5(n_classes)
+        model = Resnet5(n_classes).to(DEVICE)
 
     # beging by doing some pre-processing and scaling of data
     transform_train = transforms.Compose([transforms.ToTensor(),\
@@ -41,16 +41,16 @@ def Train(m_name):
     test_d = CIFAR10(
             root='datasets', train=False,
             download=True, transform=transform_test)
-    epochs = 10
+    epochs = 200
     train_loss = 0
-    total = 0
-    correct = 0
-    test_loader = DataLoader(test_d, batch_size=128, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_d, batch_size=100, shuffle=True, num_workers=4)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     for e in range(epochs):
+        correct = 0
+        total = 0
         model.train()
         for batch_idx, (X, Y) in enumerate(train_loader):
 
@@ -59,14 +59,17 @@ def Train(m_name):
             outputs = model(X)
             loss = criterion(outputs,Y)
             loss.backward()
+            # parameter update
             optimizer.step()
             train_loss += loss.item()
             _, predicted = outputs.max(1)
             total += Y.size(0)
             correct += predicted.eq(Y).sum().item()
+        if (e + 1) % 10 == 0:
+            print('Epoch: {}, Loss {:.3f}, Accuracy {:.3f}'.format(e+1, loss.item(), 100.*correct/total))
 
-            progress_bar(batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-            % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            # progress_bar(batch_idx, len(train_loader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+            # % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
     torch.save(model.state_dict(), TWEIGHT_PTH)
 
