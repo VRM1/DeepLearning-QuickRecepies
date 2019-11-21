@@ -14,12 +14,14 @@ import torch.optim as optim
 import torch.nn as nn
 from Model import Resnet5
 import pkbar
-
+import os
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
 else:
     DEVICE = torch.device('cpu')
 
+if not os.path.isdir('trained_weights'):
+    os.makedirs('trained_weights')
 TWEIGHT_PTH = 'trained_weights/cifar_net.pth'
 
 def Train(m_name):
@@ -72,12 +74,6 @@ def Train(m_name):
                 kbar.update(batch_idx+1, values=[("Epoch", e+1),("Loss", loss.item()), ("Accuracy", 100.*correct/total)])
         if (e+1) % 10 == 0:
             print('',end=" ")
-
-        # if (e + 1) % 10 == 0:
-        #     print('Epoch: {}, Loss {:.3f}, Accuracy {:.3f}'.format(e+1, loss.item(), 100.*correct/total))
-
-        # progress_bar(batch_idx+1, len(train_loader), 'Loss: %.3f | Acc: %.3f'
-        # % (loss.item(), 100.*correct/total))
 
     # torch.save(model.state_dict(), TWEIGHT_PTH)
 
