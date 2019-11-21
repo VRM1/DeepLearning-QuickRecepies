@@ -1,2 +1,4 @@
 *.idea
 *.xml
+datasets
+__pycache__
