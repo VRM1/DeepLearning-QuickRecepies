@@ -53,8 +53,8 @@ class RunModel:
         self.test_loader = DataLoader(test_d, batch_size=self.tst_b_sz, shuffle=True, num_workers=4)
         self.test_len = len(test_d)
         # beging by doing some pre-processing and scaling of data
-
-        if m_name == 'Restnet5':
+        # lenet-5 http://yann.lecun.com/exdb/lenet/
+        if m_name == 'Lenet5':
             self.model = Resnet5(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
             print('Running Mode:{}, #Parameters:{}'.format(m_name,t_param))
