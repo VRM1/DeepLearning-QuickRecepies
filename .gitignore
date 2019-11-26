@@ -1,4 +1,5 @@
 *.idea
 *.xml
 datasets
+*.DS_Store
 __pycache__
