@@ -73,11 +73,11 @@ class RunModel:
         self.test_len = len(test_d)
         # beging by doing some pre-processing and scaling of data
         # lenet-5 http://yann.lecun.com/exdb/lenet/
-        if m_name == 'resnet5':
+        if m_name == 'lenet5':
             self.model = Resnet5(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
             print('Running Mode:{}, #Parameters:{}'.format(m_name,t_param))
-            print(self.model)
+            print(summary(self.model, (3,32,32)))
         if m_name == 'alexnet':
             self.model = AlexnetCifar(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
@@ -138,7 +138,7 @@ class RunModel:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CNN self.models that use CIFAR10')
-    parser.add_argument('-m','--model', help='model name', default='resnet5')
+    parser.add_argument('-m','--model', help='model name', default='lenet5')
     parser.add_argument('-d','--dataset', help='dataset type', default='cifar10')
     args = parser.parse_args()
     run_model = RunModel(args.model, args.dataset)
