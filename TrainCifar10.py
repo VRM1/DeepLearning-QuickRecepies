@@ -35,7 +35,7 @@ class RunModel:
     def __init__(self,m_name):
 
         self.n_classes = 10
-        self.epochs = 250
+        self.epochs = 150
         self.tr_b_sz = 128
         self.tst_b_sz = 10
 
