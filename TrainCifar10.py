@@ -7,7 +7,7 @@ import argparse
 import torch
 import sys
 import torch.nn as nn
-from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR10, CIFAR100
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -32,9 +32,8 @@ TWEIGHT_PTH = 'trained_weights/cifar_net.pth'
 
 class RunModel:
 
-    def __init__(self,m_name):
+    def __init__(self,m_name, d_nam):
 
-        self.n_classes = 10
         self.epochs = 150
         self.tr_b_sz = 128
         self.tst_b_sz = 10
@@ -43,15 +42,30 @@ class RunModel:
                                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         self.transform_test = transforms.Compose([transforms.ToTensor(),\
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        train_d = CIFAR10(
-                root='datasets', train=True,
-                download=True, transform=self.transform_train)
+
+        if d_nam == 'cifar10':
+
+            self.n_classes = 10
+            train_d = CIFAR10(
+                    root='datasets', train=True,
+                    download=True, transform=self.transform_train)
+            test_d = CIFAR10(
+                    root='datasets', train=False,
+                    download=True, transform=self.transform_test)
+
+        if d_nam == 'cifar100':
+
+            self.n_classes = 100
+            train_d = CIFAR100(
+                    root='datasets', train=True,
+                    download=True, transform=self.transform_train)
+            test_d = CIFAR100(
+                    root='datasets', train=False,
+                    download=True, transform=self.transform_test)
+
         self.train_len = len(train_d)
         self.train_loader = DataLoader(train_d, batch_size=self.tr_b_sz, shuffle=True, num_workers=4)
 
-        test_d = CIFAR10(
-                root='datasets', train=False,
-                download=True, transform=self.transform_test)
         self.test_loader = DataLoader(test_d, batch_size=self.tst_b_sz, shuffle=True, num_workers=4)
         self.test_len = len(test_d)
         # beging by doing some pre-processing and scaling of data
@@ -122,7 +136,8 @@ class RunModel:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CNN self.models that use CIFAR10')
     parser.add_argument('-m','--model', help='model name', default='resnet5')
+    parser.add_argument('-d','--dataset', help='dataset type', default='cifar10')
     args = parser.parse_args()
-    run_model = RunModel(args.model)
+    run_model = RunModel(args.model, args.dataset)
     run_model.Train()
     run_model.Test()
