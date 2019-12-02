@@ -6,13 +6,17 @@ from torch.nn import Conv2d, Linear
 This structure differs from what Alex had proposed in his work: https://arxiv.org/pdf/1404.5997.pdf
 , which is clearly desribed here: 
 1. https://www.learnopencv.com/number-of-parameters-and-tensor-sizes-in-convolutional-neural-network/
-2. https://github.com/AbhishekTaur/AlexNet-CIFAR-10/blob/master/alexnet.py
+
 
 The architecture seems to be modified in the Pytorch TORCHVISION.MODELS. The modification is mostly
-related to the size of the filter and padding. For instance, the vannila paper used 96 kernels in the
-first conv layer, here we use 64.
+related to the size of the filter, the stride and padding. For instance, the vannila paper used 96 kernels in the
+first conv layer, here we use 64. If you want to keep the same architecture as the original, you can simply upscale
+the 32*32 image to 227*227. However, this does not yield the best results.
+
+https://github.com/AbhishekTaur/AlexNet-CIFAR-10/blob/master/alexnet.py
 '''
 
+# alexnet for imagenet
 class AlexnetImageNet(nn.Module):
 
     def __init__(self, n_classes):
@@ -49,7 +53,7 @@ class AlexnetImageNet(nn.Module):
         return out
 
 
-
+# alexnet for CIFAR 10
 class AlexnetCifar(nn.Module):
 
     def __init__(self, n_classes):
