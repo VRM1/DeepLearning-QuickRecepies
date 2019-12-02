@@ -16,7 +16,10 @@ from Model import Resnet5, AlexnetCifar
 from Model import AlexNetB
 import pkbar
 import os
+import numpy as np
 from torchsummary import summary
+torch.manual_seed(33)
+np.random.seed(33)
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')
 else:
@@ -34,7 +37,7 @@ class RunModel:
 
     def __init__(self,m_name, d_nam):
 
-        self.epochs = 150
+        self.epochs = 250
         self.tr_b_sz = 128
         self.tst_b_sz = 10
 
