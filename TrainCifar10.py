@@ -18,10 +18,18 @@ import pkbar
 import os
 import numpy as np
 from torchsummary import summary
+import GPUtil
+import torch as th
+
 torch.manual_seed(33)
 np.random.seed(33)
 if torch.cuda.is_available():
-    DEVICE = torch.device('cuda')
+    # check which gpu is free and assign that gpu
+    AVAILABLE_GPU = GPUtil.getAvailable(order = 'first', limit = 1, maxLoad = 0.5,\
+                                    maxMemory = 0.5, includeNan=False, excludeID=[], excludeUUID=[])[0]
+    th.cuda.set_device(AVAILABLE_GPU)
+    print('Program will be executed on GPU:{}'.format(AVAILABLE_GPU))
+    DEVICE = torch.device('cuda:'+str(AVAILABLE_GPU))
 else:
     DEVICE = torch.device('cpu')
 
@@ -31,7 +39,6 @@ several popular self.models based on convolution neural network.
 '''
 if not os.path.isdir('trained_weights'):
     os.makedirs('trained_weights')
-TWEIGHT_PTH = 'trained_weights/cifar_net.pth'
 
 class RunModel:
 
@@ -45,6 +52,9 @@ class RunModel:
                                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         self.transform_test = transforms.Compose([transforms.ToTensor(),\
                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+        # path to write trained weights
+        self.train_weight_path = 'trained_weights/'+m_name+'-'+d_nam+'-'+str(self.epochs)+\
+                                 '-'+str(self.tr_b_sz)+'.pth'
 
         if d_nam == 'cifar10':
 
@@ -115,13 +125,13 @@ class RunModel:
             if (e+1) % 10 == 0:
                 print('',end=" ")
 
-        torch.save(self.model.state_dict(), TWEIGHT_PTH)
-        print('Trained Weights are Written to {} file'.format(TWEIGHT_PTH))
+        torch.save(self.model.state_dict(), self.train_weight_path)
+        print('Trained Weights are Written to {} file'.format(self.train_weight_path))
 
     def Test(self):
 
         num_of_batches_per_epoch = int(self.test_len/self.tst_b_sz)
-        self.model.load_state_dict(torch.load(TWEIGHT_PTH))
+        self.model.load_state_dict(torch.load(self.train_weight_path))
         correct = 0
         total = 0
         kbar = pkbar.Kbar(target=num_of_batches_per_epoch, width=11)
