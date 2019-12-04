@@ -3,7 +3,7 @@ from torch.nn import Conv2d, Linear, MaxPool2d
 import torch.nn.functional as F
 
 # following link shows the Resnet-5 architecture https://engmrk.com/lenet-5-a-classic-cnn-architecture/
-class Resnet5(nn.Module):
+class Lenet5(nn.Module):
 
     def __init__(self,n_classes):
         super().__init__()

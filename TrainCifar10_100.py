@@ -12,7 +12,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
-from Model import Resnet5, AlexnetCifar
+from Model import Lenet5, AlexnetCifar
 from Model import AlexNetB
 import pkbar
 import os
@@ -84,7 +84,7 @@ class RunModel:
         # beging by doing some pre-processing and scaling of data
         # lenet-5 http://yann.lecun.com/exdb/lenet/
         if m_name == 'lenet5':
-            self.model = Resnet5(self.n_classes).to(DEVICE)
+            self.model = Lenet5(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
             print('Running Mode:{}, #Parameters:{}'.format(m_name,t_param))
             print(summary(self.model, (3,32,32)))
@@ -97,7 +97,7 @@ class RunModel:
 
     def Train(self):
 
-        num_of_batches_per_epoch = int(self.train_len/self.tr_b_sz)
+        num_of_batches_per_epoch = int(self.train_len/self.tr_b_sz)+1
         train_loss = 0
         tgt = 10
         criterion = nn.CrossEntropyLoss()
@@ -130,7 +130,7 @@ class RunModel:
 
     def Test(self):
 
-        num_of_batches_per_epoch = int(self.test_len/self.tst_b_sz)
+        num_of_batches_per_epoch = int(self.test_len/self.tst_b_sz)+1
         self.model.load_state_dict(torch.load(self.train_weight_path))
         correct = 0
         total = 0

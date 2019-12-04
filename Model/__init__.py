@@ -1,3 +1,3 @@
-from .Resnet5 import Resnet5
+from .Lenet5 import Lenet5
 from .Alexnet import AlexnetCifar
 from .Alexnet import AlexNetB
