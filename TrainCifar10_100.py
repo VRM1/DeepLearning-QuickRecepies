@@ -77,9 +77,9 @@ class RunModel:
                     download=True, transform=self.transform_test)
 
         self.train_len = len(train_d)
-        self.train_loader = DataLoader(train_d, batch_size=self.tr_b_sz, shuffle=True, num_workers=4)
+        self.train_loader = DataLoader(train_d, batch_size=self.tr_b_sz, shuffle=True, num_workers=0)
 
-        self.test_loader = DataLoader(test_d, batch_size=self.tst_b_sz, shuffle=True, num_workers=4)
+        self.test_loader = DataLoader(test_d, batch_size=self.tst_b_sz, shuffle=True, num_workers=0)
         self.test_len = len(test_d)
         # beging by doing some pre-processing and scaling of data
         # lenet-5 http://yann.lecun.com/exdb/lenet/
@@ -105,7 +105,7 @@ class RunModel:
         for e in range(self.epochs):
             correct = 0
             total = 0
-            kbar = pkbar.Kbar(target=num_of_batches_per_epoch, width=11)
+            kbar = pkbar.Kbar(target=num_of_batches_per_epoch, width=30)
             self.model.train()
             for batch_idx, (X, Y) in enumerate(self.train_loader):
 
@@ -120,8 +120,8 @@ class RunModel:
                 _, predicted = outputs.max(1)
                 total += Y.size(0)
                 correct += predicted.eq(Y).sum().item()
-                if (e+1) % 10 == 0:
-                    kbar.update(batch_idx+1, values=[("Epoch", e+1),("Loss", loss.item()), ("Accuracy", 100.*correct/total)])
+                # if (e+1) % 10 == 0:
+                kbar.update(batch_idx+1, values=[("Epoch", e+1),("Loss", loss.item()), ("Accuracy", 100.*correct/total)])
             if (e+1) % 10 == 0:
                 print('',end=" ")
 
