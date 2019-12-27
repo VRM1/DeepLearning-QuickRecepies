@@ -105,7 +105,8 @@ class RunModel:
         for e in range(self.epochs):
             correct = 0
             total = 0
-            kbar = pkbar.Kbar(target=num_of_batches_per_epoch, width=30)
+            kbar = pkbar.Kbar(target=num_of_batches_per_epoch,
+                              stateful_metrics=['Loss', 'Accuracy'], width=30)
             self.model.train()
             for batch_idx, (X, Y) in enumerate(self.train_loader):
 
@@ -121,7 +122,8 @@ class RunModel:
                 total += Y.size(0)
                 correct += predicted.eq(Y).sum().item()
                 # if (e+1) % 10 == 0:
-                kbar.update(batch_idx+1, values=[("Epoch", e+1),("Loss", loss.item()), ("Accuracy", 100.*correct/total)])
+                kbar.update(batch_idx+1, values=[("Epoch", e+1),
+                                                 ("Loss", loss.item()), ("Accuracy", 100.*correct/total)])
             if (e+1) % 10 == 0:
                 print('',end=" ")
 
@@ -134,7 +136,8 @@ class RunModel:
         self.model.load_state_dict(torch.load(self.train_weight_path))
         correct = 0
         total = 0
-        kbar = pkbar.Kbar(target=num_of_batches_per_epoch, width=11)
+        kbar = pkbar.Kbar(target=num_of_batches_per_epoch,
+                          stateful_metrics=['Loss', 'Accuracy'], width=11)
         self.model.eval()
         with torch.no_grad():
             for batch_idx, (X,Y) in enumerate(self.test_loader):
