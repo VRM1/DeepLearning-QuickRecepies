@@ -1,6 +1,9 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Conv2d, Linear
+# https://github.com/piEsposito/blitz-bayesian-deep-learning
+from blitz.modules import BayesianLinear, BayesianConv2d
+from blitz.utils import variational_estimator
 
 '''
 This structure differs from what Alex had proposed in his work: https://arxiv.org/pdf/1404.5997.pdf
@@ -91,6 +94,42 @@ class AlexnetCifar(nn.Module):
         out = self.fc_3(out)
         return out
 
+# bayesian alexnet for CIFAR 10
+@variational_estimator
+class BAlexnet(nn.Module):
+
+    def __init__(self, n_classes):
+        super().__init__()
+        self.conv_1 = BayesianConv2d(in_channels=3, out_channels=64, kernel_size=(3,3), stride=1, padding=2)
+        self.conv_2 = BayesianConv2d(in_channels=64, out_channels=192, kernel_size=(3,3), padding=2)
+        self.conv_3 = BayesianConv2d(in_channels=192, out_channels=384, kernel_size=(3,3), padding=1)
+        self.conv_4 = BayesianConv2d(in_channels=384, out_channels=256, kernel_size=(3,3), padding=1)
+        self.conv_5 = BayesianConv2d(in_channels=256, out_channels=256, kernel_size=(3,3), padding=1)
+        self.mx_pl = nn.MaxPool2d(kernel_size=3, stride=2)
+
+        # fully connected layers
+        self.fc_1 = BayesianLinear(in_features=4096, out_features=512)
+        self.fc_2 = BayesianLinear(in_features=512, out_features=256)
+        self.fc_3 = BayesianLinear(in_features=256, out_features=n_classes)
+
+        # layers = [self.conv_1, self.conv_2, self.conv_3, self.conv_4, self.conv_5, self.fc_1, self.fc_2, self.fc_3]
+        # self.layers = nn.ModuleList(layers)
+    def forward(self, x):
+
+        out = F.relu(self.conv_1(x))
+        out = F.max_pool2d(out,kernel_size=2)
+        out = F.relu(self.conv_2(out))
+        out = F.max_pool2d(out,kernel_size=2)
+        # what does inplace do: https://discuss.pytorch.org/t/whats-the-difference-between-nn-relu-and-nn-relu-inplace-true/948
+        out = F.relu(self.conv_3(out))
+        out = F.relu(self.conv_4(out))
+        out = F.relu(self.conv_5(out))
+        out = F.max_pool2d(out, kernel_size=3, stride=2)
+        out = out.view(out.size(0),-1)
+        out = F.relu(self.fc_1(out))
+        out = self.fc_2(out)
+        out = self.fc_3(out)
+        return out
 
 class AlexNetB(nn.Module):
 
