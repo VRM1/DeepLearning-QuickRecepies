@@ -31,6 +31,7 @@ class BVGG(nn.Module):
         else:
             # change this
             i_dim = 512
+        #
         super().__init__()
         self.features = self._make_conv_layers(i_channel, bcfg[vgg_name])
         # self.classifier = nn.Linear(512, 10)
