@@ -69,7 +69,7 @@ def get_fashion_mnist():
 
 #     return (n_classes, i_channel, i_dim, train_d, test_d)
 
-def get_cifar10(train_batch_sz=256, test_batch_sz=512):
+def get_cifar10(train_batch_sz=256, test_batch_sz=512, is_valid=False):
     n_classes = 10
     i_channel = 3
     i_dim = 32
@@ -89,21 +89,25 @@ def get_cifar10(train_batch_sz=256, test_batch_sz=512):
         root=D_PTH, train=False,
         download=True, transform=transform_test)
     train_len = len(train_d)
-    test_len = len(test_d)
-    indices = range(train_len)
-    # 10% of data is used for validation
-    split = int(np.floor(0.1 * train_len))
-    valid_indx = np.random.choice(indices, split)
-    train_indx = set(indices).difference(set(valid_indx))
-    train_sampler = SubsetRandomSampler(list(train_indx))
-    new_train_len = len(train_indx)
-    valid_len = len(valid_indx)
-    valid_sampler = SubsetRandomSampler(valid_indx)
-    train_loader = DataLoader(train_d, batch_size=train_batch_sz, sampler=train_sampler, num_workers=4)
-    valid_loader = DataLoader(train_d, batch_size=test_batch_sz, sampler=valid_sampler, num_workers=4)
+    if is_valid:
+        test_len = len(test_d)
+        indices = range(train_len)
+        # 10% of data is used for validation
+        split = int(np.floor(0.1 * train_len))
+        valid_indx = np.random.choice(indices, split)
+        train_indx = set(indices).difference(set(valid_indx))
+        train_sampler = SubsetRandomSampler(list(train_indx))
+        train_len = len(train_indx)
+        valid_len = len(valid_indx)
+        valid_sampler = SubsetRandomSampler(valid_indx)
+        train_loader = DataLoader(train_d, batch_size=train_batch_sz, sampler=train_sampler, num_workers=4)
+        valid_loader = DataLoader(train_d, batch_size=test_batch_sz, sampler=valid_sampler, num_workers=4)
+    else:
+        train_loader = DataLoader(train_d, batch_size=train_batch_sz, num_workers=4)
+
     test_loader = DataLoader(test_d, batch_size=test_batch_sz, shuffle=True, num_workers=0)
 
-    return n_classes, i_channel, i_dim, new_train_len, valid_len, \
+    return n_classes, i_channel, i_dim, train_len, valid_len, \
            test_len, train_loader, valid_loader, test_loader
 
 

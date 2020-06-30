@@ -24,6 +24,7 @@ import torch as th
 from Dataset import get_cifar10
 from tqdm import tqdm
 from torch.utils.data.sampler import SubsetRandomSampler
+from Utils import EarlyStopping
 
 torch.manual_seed(33)
 np.random.seed(33)
@@ -53,19 +54,25 @@ class RunModel:
         self.tr_b_sz = 256
         self.tst_b_sz = 512
         self.is_bayesian = args.is_bayesian
+        # number of MCMC samples for Bayesian NN. If network is not bayesian, it is simply set as 1
+        if args.is_bayesian:
+            self.n_samples = 3
+        else:
+            self.n_samples = 1
         self.criterion = nn.CrossEntropyLoss()
         self.optim = args.optimizer
         self.m_name = args.model
+        self.d_name = args.dataset
         self.lr = 0.001
         # path to write trained weights
-        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + args.dataset + '-' + str(self.epochs) + \
+        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' + str(self.epochs) + \
                                  '-' + str(self.tr_b_sz) + '.pth'
 
-        if args.dataset == 'cifar10':
+        if self.d_name == 'cifar10':
             self.n_classes, self.i_channel, self.i_dim, self.train_len, self.valid_len, self.test_len, \
             self.train_loader, self.valid_loader, self.test_loader = get_cifar10(self.tr_b_sz, self.tst_b_sz)
 
-        if args.dataset == 'cifar100':
+        if self.d_name == 'cifar100':
             self.n_classes = 100
             train_d = CIFAR100(
                 root='datasets', train=True,
@@ -103,7 +110,7 @@ class RunModel:
             t_param = sum(p.numel() for p in self.model.parameters())
 
         elif self.m_name == 'VGG' and self.is_bayesian:
-            self.model = BVGG(self.n_classes, self.i_channel, 'VGG11').to(DEVICE)
+            self.model = BVGG(self.n_classes, self.i_channel, 'VGG19').to(DEVICE)
             self.model.features = torch.nn.DataParallel(self.model.features)
             t_param = sum(p.numel() for p in self.model.parameters())
 
@@ -130,7 +137,7 @@ class RunModel:
                 loss = self.model.sample_elbo(inputs=X,
                                               labels=Y,
                                               criterion=self.criterion,
-                                              sample_nbr=3,
+                                              sample_nbr=self.n_samples,
                                               complexity_cost_weight=1 / 50000)
             else:
                 outputs = self.model(X)
@@ -169,6 +176,17 @@ class RunModel:
         t_accuracy = (100. * correct / total)
         return t_accuracy
 
+    def getTrainedmodel(self):
+        retrain = 100
+        if self.is_bayesian:
+            net_typ = '_is_bayesian_1'
+        else:
+            net_typ = '_is_bayesian_0'
+        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' + 'e' + str(self.epochs) \
+                                 + '-b' + str(self.tr_b_sz) + '_mcmc' + str(self.n_samples) \
+                                 + net_typ + '_optim-' + self.optim + '.pkl'
+        return (self.model, self.train_weight_path)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CNN self.models that use CIFAR10')
@@ -177,12 +195,19 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', help='number of epochs', default=100, type=int)
     parser.add_argument('-op', '--optimizer', help='optimizer types, 1. SGD 2. Adam, default SGD', default='Adam')
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
+    parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
 
     args = parser.parse_args()
     run_model = RunModel(args)
+    patience = 10
+    early_stopping = EarlyStopping(patience=patience, verbose=True, typ='accuracy')
     for e in range(args.epochs):
         avg_train_loss, train_accuracy = run_model.train()
         valid_accuracy = run_model.test(is_valid=True)
         tst_accuracy = run_model.test()
-        print('Epoch:{}, AvgTrainLoss:{}, TrainAccuracy:{}, ValidationAccuracy:{}, TestAccuracy:{}'
+        model, path_to_write = run_model.getTrainedmodel()
+        early_stopping(valid_accuracy, model, run_model.optimizer, path_to_write)
+        if early_stopping.early_stop:
+            break
+        print('Epoch:{}, AvgTrainLoss:{:.3f}, TrainAccuracy:{:.2f}, ValidationAccuracy:{:.2f}, TestAccuracy:{:.2f}'
               .format(e, avg_train_loss, train_accuracy, valid_accuracy, tst_accuracy))
