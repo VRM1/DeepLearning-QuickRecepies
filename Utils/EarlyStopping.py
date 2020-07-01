@@ -32,14 +32,12 @@ class EarlyStopping:
 
     def __call__(self, metric, model, optimizer, pth_to_write):
 
-        if self.type == 'loss':
-            score = -metric
-        elif self.type == 'accuracy':
-            score = metric
+        
+        score = metric
 
-        if self.best_score is None:
+        if self.best_score == 0 or self.best_score == np.Inf:
             self.save_checkpoint(metric, model, optimizer, pth_to_write)
-        elif score <= self.best_score + self.delta and self.type == 'loss' and not self.write_all:
+        elif abs(score-self.best_score) <= self.delta and self.type == 'loss' and not self.write_all:
             self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:

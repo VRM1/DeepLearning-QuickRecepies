@@ -67,10 +67,10 @@ class RunModel:
         # path to write trained weights
         self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' + str(self.epochs) + \
                                  '-' + str(self.tr_b_sz) + '.pth'
-
-        if self.d_name == 'cifar10':
-            self.n_classes, self.i_channel, self.i_dim, self.train_len, self.valid_len, self.test_len, \
-            self.train_loader, self.valid_loader, self.test_loader = get_cifar10(self.tr_b_sz, self.tst_b_sz)
+        
+        
+        self.n_classes, self.i_channel, self.i_dim, self.train_len, self.valid_len, self.test_len, \
+        self.train_loader, self.valid_loader, self.test_loader = get_cifar10(self.tr_b_sz, self.tst_b_sz)
 
         if self.d_name == 'cifar100':
             self.n_classes = 100
@@ -111,7 +111,7 @@ class RunModel:
 
         elif self.m_name == 'VGG' and self.is_bayesian:
             self.model = BVGG(self.n_classes, self.i_channel, 'VGG19').to(DEVICE)
-            self.model.features = torch.nn.DataParallel(self.model.features)
+            # torch.nn.DataParallel(self.model.features)
             t_param = sum(p.numel() for p in self.model.parameters())
 
         print('Running Mode:{}, #TrainingSamples:{}, #ValidationSamples:{}, #TestSamples:{}, #Parameters:{}'
@@ -176,15 +176,15 @@ class RunModel:
         t_accuracy = (100. * correct / total)
         return t_accuracy
 
-    def getTrainedmodel(self):
+    def getTrainedmodel(self, e):
         retrain = 100
         if self.is_bayesian:
             net_typ = '_is_bayesian_1'
         else:
             net_typ = '_is_bayesian_0'
-        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' + 'e' + str(self.epochs) \
-                                 + '-b' + str(self.tr_b_sz) + '_mcmc' + str(self.n_samples) \
-                                 + net_typ + '_optim-' + self.optim + '.pkl'
+        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' \
+                                 + '-b' + str(self.tr_b_sz) + '-mcmc' + str(self.n_samples) + '-' + \
+                                 + net_typ + '-' + self.optim + '-e' + str(e) + '.pkl'
         return (self.model, self.train_weight_path)
 
 
@@ -192,22 +192,33 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CNN self.models that use CIFAR10')
     parser.add_argument('-m', '--model', help='model name 1.lenet5 2.alexnet 3. VGG', default='lenet5')
     parser.add_argument('-d', '--dataset', help='dataset type', default='cifar10')
-    parser.add_argument('-e', '--epochs', help='number of epochs', default=100, type=int)
+    parser.add_argument('-e', '--epochs', help='number of epochs', default=150, type=int)
     parser.add_argument('-op', '--optimizer', help='optimizer types, 1. SGD 2. Adam, default SGD', default='Adam')
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
     parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
+    parser.add_argument('-rf', '--resume_from', help='if you want to resume from an epoch', default=0, type=int)
 
     args = parser.parse_args()
     run_model = RunModel(args)
-    patience = 10
-    early_stopping = EarlyStopping(patience=patience, verbose=True, typ='accuracy')
+    patience = 15
+    start_epoch = 0
+    if args.resume_from:
+        start_epoch = args.resume_from
+        
+    early_stopping = EarlyStopping(patience=patience, verbose=True, typ='loss')
     for e in range(args.epochs):
         avg_train_loss, train_accuracy = run_model.train()
-        valid_accuracy = run_model.test(is_valid=True)
+        if args.is_valid:
+            valid_accuracy = run_model.test(is_valid=True)
+        
         tst_accuracy = run_model.test()
-        model, path_to_write = run_model.getTrainedmodel()
-        early_stopping(valid_accuracy, model, run_model.optimizer, path_to_write)
+        model, path_to_write = run_model.getTrainedmodel(e)
+        early_stopping(avg_train_loss, model, run_model.optimizer, path_to_write)
         if early_stopping.early_stop:
             break
-        print('Epoch:{}, AvgTrainLoss:{:.3f}, TrainAccuracy:{:.2f}, ValidationAccuracy:{:.2f}, TestAccuracy:{:.2f}'
-              .format(e, avg_train_loss, train_accuracy, valid_accuracy, tst_accuracy))
+        if args.is_valid:
+            print('Epoch:{}, AvgTrainLoss:{:.3f}, TrainAccuracy:{:.2f}, ValidationAccuracy:{:.2f}, TestAccuracy:{:.2f}'
+                .format(e, avg_train_loss, train_accuracy, valid_accuracy, tst_accuracy))
+        else:
+            print('Epoch:{}, AvgTrainLoss:{:.3f}, TrainAccuracy:{:.2f}, TestAccuracy:{:.2f}'
+                .format(e, avg_train_loss, train_accuracy, tst_accuracy))
