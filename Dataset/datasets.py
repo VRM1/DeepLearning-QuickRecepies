@@ -7,8 +7,8 @@ from torch.utils.data import DataLoader
 from torch import nn
 
 HOME = expanduser('~')
-# D_PTH = HOME + '/Documents/DataRepo'
-D_PTH = HOME + '/data/DataRepo'
+D_PTH = HOME + '/Documents/DataRepo'
+# D_PTH = HOME + '/data/DataRepo'
 
 
 def get_mnist():

@@ -1,5 +1,6 @@
 *.idea
 *.xml
+.vscode
 datasets
 *.DS_Store
 __pycache__

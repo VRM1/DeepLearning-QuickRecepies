@@ -5,17 +5,11 @@ This program trains the following self.models with Cifar-10 dataset: https://www
 '''
 import argparse
 import torch
-import sys
-import torch.nn as nn
-from torchvision.datasets import CIFAR10, CIFAR100
-import torchvision.transforms as transforms
+from torchvision.datasets import CIFAR100
 from torch.utils.data import DataLoader
-import torch.optim as optim
 import torch.nn as nn
 from Model import Lenet5, AlexnetCifar, BAlexnet
 from Model import BVGG
-from Model import AlexNetB
-import pkbar
 import os
 import numpy as np
 from torchsummary import summary
@@ -63,7 +57,8 @@ class RunModel:
         self.optim = args.optimizer
         self.m_name = args.model
         self.d_name = args.dataset
-        self.lr = 0.001
+        self.lr = args.learning_rate
+        self.resume_from = args.resume_from
         # path to write trained weights
         self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' + str(self.epochs) + \
                                  '-' + str(self.tr_b_sz) + '.pth'
@@ -95,7 +90,7 @@ class RunModel:
         self.train_loader = DataLoader(self.train_d, batch_size=self.tr_b_sz, sampler=train_sampler, num_workers=1)
         self.valid_loader = DataLoader(self.train_d, batch_size=256, sampler=valid_sampler, num_workers=1)
 
-    def init_model(self):
+    def init_model(self, load_weights=False, res_round=None):
         if self.m_name == 'lenet5' and not self.is_bayesian:
             self.model = Lenet5(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
@@ -114,8 +109,24 @@ class RunModel:
             # torch.nn.DataParallel(self.model.features)
             t_param = sum(p.numel() for p in self.model.parameters())
 
-        print('Running Mode:{}, #TrainingSamples:{}, #ValidationSamples:{}, #TestSamples:{}, #Parameters:{}'
-              .format(self.m_name, self.train_len, self.valid_len, self.test_len, t_param))
+        if self.resume_from:
+            self.__load_pre_train_model(self.resume_from)
+        print('Running Mode:{}, #TrainingSamples:{}, #ValidationSamples:{}, #TestSamples:{}, #Parameters:{} ResumingFromEpoch:{}'
+              .format(self.m_name, self.train_len, self.valid_len, self.test_len, t_param, self.resume_from))
+
+    def __load_pre_train_model(self, resume_from):
+
+        # get the name/path of the weight to be loaded
+        self.getTrainedmodel(resume_from)
+        # load the weights
+        if DEVICE.type == 'cpu':
+            state = torch.load(self.train_weight_path, map_location=torch.device('cpu'))
+        else:
+            state = torch.load(self.train_weight_path)
+
+        self.init_optimizer(self.lr)
+        self.model.load_state_dict(state['weights'])
+        self.optimizer.load_state_dict(state['optimizer'])
 
     def init_optimizer(self, l_rate=0.001):
         if self.optim == 'SGD':
@@ -183,7 +194,7 @@ class RunModel:
         else:
             net_typ = '_is_bayesian_0'
         self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' \
-                                 + '-b' + str(self.tr_b_sz) + '-mcmc' + str(self.n_samples) + '-' + \
+                                 + '-b' + str(self.tr_b_sz) + '-mcmc' + str(self.n_samples) + '-' \
                                  + net_typ + '-' + self.optim + '-e' + str(e) + '.pkl'
         return (self.model, self.train_weight_path)
 
@@ -193,6 +204,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--model', help='model name 1.lenet5 2.alexnet 3. VGG', default='lenet5')
     parser.add_argument('-d', '--dataset', help='dataset type', default='cifar10')
     parser.add_argument('-e', '--epochs', help='number of epochs', default=150, type=int)
+    parser.add_argument('-lr', '--learning_rate', help='learning rate', default=0.001, type=float)
     parser.add_argument('-op', '--optimizer', help='optimizer types, 1. SGD 2. Adam, default SGD', default='Adam')
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
     parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
@@ -203,10 +215,10 @@ if __name__ == '__main__':
     patience = 15
     start_epoch = 0
     if args.resume_from:
-        start_epoch = args.resume_from
+        start_epoch = args.resume_from + 1
         
     early_stopping = EarlyStopping(patience=patience, verbose=True, typ='loss')
-    for e in range(args.epochs):
+    for e in range(start_epoch, args.epochs):
         avg_train_loss, train_accuracy = run_model.train()
         if args.is_valid:
             valid_accuracy = run_model.test(is_valid=True)
