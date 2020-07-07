@@ -7,8 +7,8 @@ from torch.utils.data import DataLoader
 from torch import nn
 
 HOME = expanduser('~')
-D_PTH = HOME + '/Documents/DataRepo'
-# D_PTH = HOME + '/data/DataRepo'
+# D_PTH = HOME + '/Documents/DataRepo'
+D_PTH = '/data/DataRepo'
 
 
 def get_mnist():
@@ -104,9 +104,10 @@ def get_cifar10(train_batch_sz=256, test_batch_sz=512, is_valid=False):
     train_len = len(train_indx)
     valid_len = len(valid_indx)
     valid_sampler = SubsetRandomSampler(valid_indx)
-    train_loader = DataLoader(train_d, batch_size=train_batch_sz, sampler=train_sampler, num_workers=4)
+    # train_loader = DataLoader(train_d, batch_size=train_batch_sz, sampler=train_sampler, num_workers=4)
+    train_loader = DataLoader(train_d, batch_size=train_batch_sz, shuffle=True, num_workers=4)
     valid_loader = DataLoader(train_d, batch_size=test_batch_sz, sampler=valid_sampler, num_workers=4)
-    test_loader = DataLoader(test_d, batch_size=test_batch_sz, shuffle=True, num_workers=0)
+    test_loader = DataLoader(test_d, batch_size=test_batch_sz, shuffle=False, num_workers=0)
 
     return n_classes, i_channel, i_dim, train_len, valid_len, \
            test_len, train_loader, valid_loader, test_loader

@@ -9,7 +9,7 @@ from torchvision.datasets import CIFAR100
 from torch.utils.data import DataLoader
 import torch.nn as nn
 from Model import Lenet5, AlexnetCifar, BAlexnet
-from Model import BVGG
+from Model import VGG, BVGG
 import os
 import numpy as np
 from torchsummary import summary
@@ -58,7 +58,8 @@ class RunModel:
         self.m_name = args.model
         self.d_name = args.dataset
         self.lr = args.learning_rate
-        self.resume_from = args.resume_from
+        self.resume = args.resume
+        self.start_epoch = 0
         # path to write trained weights
         self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' + str(self.epochs) + \
                                  '-' + str(self.tr_b_sz) + '.pth'
@@ -103,21 +104,26 @@ class RunModel:
         elif self.m_name == 'alexnet' and self.is_bayesian:
             self.model = BAlexnet(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
+        
+        elif self.m_name == 'VGG' and not self.is_bayesian:
+            self.model = VGG(self.n_classes, self.i_channel, 'VGG19').to(DEVICE)
+            # torch.nn.DataParallel(self.model.features)
+            t_param = sum(p.numel() for p in self.model.parameters())
 
         elif self.m_name == 'VGG' and self.is_bayesian:
             self.model = BVGG(self.n_classes, self.i_channel, 'VGG19').to(DEVICE)
             # torch.nn.DataParallel(self.model.features)
             t_param = sum(p.numel() for p in self.model.parameters())
 
-        if self.resume_from:
-            self.__load_pre_train_model(self.resume_from)
+        if self.resume:
+            self.__load_pre_train_model(self.resume)
         print('Running Mode:{}, #TrainingSamples:{}, #ValidationSamples:{}, #TestSamples:{}, #Parameters:{} ResumingFromEpoch:{}'
-              .format(self.m_name, self.train_len, self.valid_len, self.test_len, t_param, self.resume_from))
+              .format(self.m_name, self.train_len, self.valid_len, self.test_len, t_param, self.start_epoch))
 
-    def __load_pre_train_model(self, resume_from):
+    def __load_pre_train_model(self, resume):
 
         # get the name/path of the weight to be loaded
-        self.getTrainedmodel(resume_from)
+        self.getTrainedmodel()
         # load the weights
         if DEVICE.type == 'cpu':
             state = torch.load(self.train_weight_path, map_location=torch.device('cpu'))
@@ -126,13 +132,17 @@ class RunModel:
 
         self.init_optimizer(self.lr)
         self.model.load_state_dict(state['weights'])
-        self.optimizer.load_state_dict(state['optimizer'])
+        self.start_epoch = state['epoch']
+        # self.optimizer.load_state_dict(state['optimizer'])
 
     def init_optimizer(self, l_rate=0.001):
         if self.optim == 'SGD':
+            # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=l_rate, momentum=0.9, 
+            #                     weight_decay=5e-4)
             self.optimizer = torch.optim.SGD(self.model.parameters(), lr=l_rate, momentum=0.9)
         else:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=l_rate, amsgrad=True)
+            # self.optimizer = torch.optim.Adam(self.model.parameters(), lr=l_rate, weight_decay=1e-5)
 
     def train(self):
 
@@ -187,15 +197,15 @@ class RunModel:
         t_accuracy = (100. * correct / total)
         return t_accuracy
 
-    def getTrainedmodel(self, e):
+    def getTrainedmodel(self):
         retrain = 100
         if self.is_bayesian:
             net_typ = '_is_bayesian_1'
         else:
             net_typ = '_is_bayesian_0'
-        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name + '-' \
+        self.train_weight_path = 'trained_weights/' + self.m_name + '-' + self.d_name \
                                  + '-b' + str(self.tr_b_sz) + '-mcmc' + str(self.n_samples) + '-' \
-                                 + net_typ + '-' + self.optim + '-e' + str(e) + '.pkl'
+                                 + net_typ + '-' + self.optim + '.pkl'
         return (self.model, self.train_weight_path)
 
 
@@ -208,14 +218,14 @@ if __name__ == '__main__':
     parser.add_argument('-op', '--optimizer', help='optimizer types, 1. SGD 2. Adam, default SGD', default='Adam')
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
     parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
-    parser.add_argument('-rf', '--resume_from', help='if you want to resume from an epoch', default=0, type=int)
+    parser.add_argument('-r', '--resume', help='if you want to resume from an epoch', action='store_true')
 
     args = parser.parse_args()
     run_model = RunModel(args)
-    patience = 15
+    patience = 10
     start_epoch = 0
-    if args.resume_from:
-        start_epoch = args.resume_from + 1
+    if args.resume:
+        start_epoch = run_model.start_epoch
         
     early_stopping = EarlyStopping(patience=patience, verbose=True, typ='loss')
     for e in range(start_epoch, args.epochs):
@@ -224,8 +234,8 @@ if __name__ == '__main__':
             valid_accuracy = run_model.test(is_valid=True)
         
         tst_accuracy = run_model.test()
-        model, path_to_write = run_model.getTrainedmodel(e)
-        early_stopping(avg_train_loss, model, run_model.optimizer, path_to_write)
+        model, path_to_write = run_model.getTrainedmodel()
+        early_stopping(e, avg_train_loss, model, run_model.optimizer, path_to_write)
         if early_stopping.early_stop:
             break
         if args.is_valid:
