@@ -7,7 +7,7 @@ class Lenet5(nn.Module):
 
     def __init__(self,n_classes):
         super().__init__()
-        # resnet has 3 input channels (RGB) and 6 filters with kernel size 5
+        # lenet has 3 input channels (RGB) and 6 filters with kernel size 5
         self.conv_1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5)
         self.conv_2 = Conv2d(in_channels=6,out_channels=16,kernel_size=5)
         # create max pool layers
