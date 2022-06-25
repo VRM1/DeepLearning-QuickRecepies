@@ -12,7 +12,7 @@ from Model import Lenet5, AlexnetCifar, BAlexnet
 from Model import VGG, BVGG
 import os
 import numpy as np
-from torchsummary import summary
+from torchinfo import summary
 import GPUtil
 import torch as th
 from Dataset import get_cifar10
@@ -30,6 +30,9 @@ if torch.cuda.is_available():
     th.cuda.set_device(AVAILABLE_GPU)
     print('Program will be executed on GPU:{}'.format(AVAILABLE_GPU))
     DEVICE = torch.device('cuda:' + str(AVAILABLE_GPU))
+elif torch.backends.mps.is_available():
+    print('Program will be executed on M1 GPU')
+    DEVICE = torch.device("mps")
 else:
     DEVICE = torch.device('cpu')
 
@@ -89,18 +92,20 @@ class RunModel:
         train_indx = set(indices).difference(set(valid_indx))
         train_sampler = SubsetRandomSampler(list(train_indx))
         valid_sampler = SubsetRandomSampler(valid_indx)
-        self.train_loader = DataLoader(self.train_d, batch_size=self.tr_b_sz, sampler=train_sampler, num_workers=1)
-        self.valid_loader = DataLoader(self.train_d, batch_size=256, sampler=valid_sampler, num_workers=1)
+        self.train_loader = DataLoader(self.train_d, batch_size=self.tr_b_sz, \
+             sampler=train_sampler, num_workers=1)
+        self.valid_loader = DataLoader(self.train_d, batch_size=256, \
+             sampler=valid_sampler, num_workers=1)
 
     def init_model(self, load_weights=False, res_round=None):
         if self.m_name == 'lenet5' and not self.is_bayesian:
             self.model = Lenet5(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
-            print(summary(self.model, (3, 32, 32)))
+            summary(self.model, (self.tr_b_sz, 3, 32, 32))
         elif self.m_name == 'alexnet' and not self.is_bayesian:
             self.model = AlexnetCifar(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
-            print(summary(self.model, (3, 32, 32)))
+            summary(self.model, (self.tr_b_sz, 3, 32, 32))
         # bayesian alexnet
         elif self.m_name == 'alexnet' and self.is_bayesian:
             self.model = BAlexnet(self.n_classes).to(DEVICE)
