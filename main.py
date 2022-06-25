@@ -23,18 +23,19 @@ import pdb
 
 torch.manual_seed(33)
 np.random.seed(33)
-if torch.cuda.is_available():
-    # check which gpu is free and assign that gpu
-    AVAILABLE_GPU = GPUtil.getAvailable(order='first', limit=1, maxLoad=0.5, \
-                                        maxMemory=0.5, includeNan=False, excludeID=[], excludeUUID=[])[0]
-    th.cuda.set_device(AVAILABLE_GPU)
-    print('Program will be executed on GPU:{}'.format(AVAILABLE_GPU))
-    DEVICE = torch.device('cuda:' + str(AVAILABLE_GPU))
-elif torch.backends.mps.is_available():
-    print('Program will be executed on M1 GPU')
-    DEVICE = torch.device("mps")
-else:
-    DEVICE = torch.device('cpu')
+DEVICE = torch.device('cpu')
+# if torch.cuda.is_available():
+#     # check which gpu is free and assign that gpu
+#     AVAILABLE_GPU = GPUtil.getAvailable(order='first', limit=1, maxLoad=0.5, \
+#                                         maxMemory=0.5, includeNan=False, excludeID=[], excludeUUID=[])[0]
+#     th.cuda.set_device(AVAILABLE_GPU)
+#     print('Program will be executed on GPU:{}'.format(AVAILABLE_GPU))
+#     DEVICE = torch.device('cuda:' + str(AVAILABLE_GPU))
+# elif torch.backends.mps.is_available():
+#     print('Program will be executed on M1 GPU')
+#     DEVICE = torch.device("mps")
+# else:
+#     DEVICE = torch.device('cpu')
 
 '''
 This program uses CIFAR10 data: https://www.cs.toronto.edu/~kriz/cifar.html for image classification using
@@ -84,6 +85,7 @@ class RunModel:
         self.init_model()
         self.init_optimizer(self.lr)
 
+
     def get_validation_data(self, is_valid):
 
         indices = range(self.train_len)
@@ -99,13 +101,15 @@ class RunModel:
 
     def init_model(self, load_weights=False, res_round=None):
         if self.m_name == 'lenet5' and not self.is_bayesian:
-            self.model = Lenet5(self.n_classes).to(DEVICE)
-            t_param = sum(p.numel() for p in self.model.parameters())
+            self.model = Lenet5(self.n_classes)
             summary(self.model, (self.tr_b_sz, 3, 32, 32))
+            t_param = sum(p.numel() for p in self.model.parameters())
+            self.model = self.model.to(DEVICE)
         elif self.m_name == 'alexnet' and not self.is_bayesian:
-            self.model = AlexnetCifar(self.n_classes).to(DEVICE)
+            self.model = AlexnetCifar(self.n_classes)
             t_param = sum(p.numel() for p in self.model.parameters())
             summary(self.model, (self.tr_b_sz, 3, 32, 32))
+            self.model = self.model.to(DEVICE)
         # bayesian alexnet
         elif self.m_name == 'alexnet' and self.is_bayesian:
             self.model = BAlexnet(self.n_classes).to(DEVICE)
@@ -225,9 +229,14 @@ if __name__ == '__main__':
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
     parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
     parser.add_argument('-r', '--resume', help='if you want to resume from an epoch', action='store_true')
+    parser.add_argument('-dev', '--device', help='device type can be cpu or gpu or mps (for M1 mac only) \
+        If not arugment is given, the program auto-detects', default=None)
 
     args = parser.parse_args()
+    if args.device:
+        DEVICE = torch.device(args.device)
     run_model = RunModel(args)
+
     patience = 10
     start_epoch = 0
     if args.resume:

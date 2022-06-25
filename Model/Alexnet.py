@@ -87,10 +87,10 @@ class AlexnetCifar(nn.Module):
         out = F.relu(self.conv_5(out), inplace=True)
         out = F.max_pool2d(out, kernel_size=3, stride=2)
         out = out.view(out.size(0),-1)
-        out = F.relu(self.fc_1(out))
-        out = F.dropout(out, inplace=True)
+        out = F.relu(self.fc_1(out), inplace=True)
+        out = F.dropout(out)
         out = self.fc_2(out)
-        out = F.dropout(out, inplace=True)
+        out = F.dropout(out)
         out = self.fc_3(out)
         return out
 
