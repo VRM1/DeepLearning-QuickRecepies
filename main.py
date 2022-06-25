@@ -23,19 +23,17 @@ import pdb
 
 torch.manual_seed(33)
 np.random.seed(33)
-DEVICE = torch.device('cpu')
-# if torch.cuda.is_available():
-#     # check which gpu is free and assign that gpu
-#     AVAILABLE_GPU = GPUtil.getAvailable(order='first', limit=1, maxLoad=0.5, \
-#                                         maxMemory=0.5, includeNan=False, excludeID=[], excludeUUID=[])[0]
-#     th.cuda.set_device(AVAILABLE_GPU)
-#     print('Program will be executed on GPU:{}'.format(AVAILABLE_GPU))
-#     DEVICE = torch.device('cuda:' + str(AVAILABLE_GPU))
-# elif torch.backends.mps.is_available():
-#     print('Program will be executed on M1 GPU')
-#     DEVICE = torch.device("mps")
-# else:
-#     DEVICE = torch.device('cpu')
+if torch.cuda.is_available():
+    # check which gpu is free and assign that gpu
+    AVAILABLE_GPU = GPUtil.getAvailable(order='first', limit=1, maxLoad=0.5, \
+                                        maxMemory=0.5, includeNan=False, excludeID=[], excludeUUID=[])[0]
+    th.cuda.set_device(AVAILABLE_GPU)
+    print('Program will be executed on GPU:{}'.format(AVAILABLE_GPU))
+    DEVICE = torch.device('cuda:' + str(AVAILABLE_GPU))
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+else:
+    DEVICE = torch.device('cpu')
 
 '''
 This program uses CIFAR10 data: https://www.cs.toronto.edu/~kriz/cifar.html for image classification using
