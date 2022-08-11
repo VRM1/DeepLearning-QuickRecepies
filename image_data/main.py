@@ -12,7 +12,7 @@ from Model import Lenet5, AlexnetCifar, BAlexnet
 from Model import VGG, BVGG
 import os
 import numpy as np
-from torchsummary import summary
+from torchinfo import summary
 import GPUtil
 import torch as th
 from Dataset import get_cifar10
@@ -20,6 +20,7 @@ from tqdm import tqdm
 from torch.utils.data.sampler import SubsetRandomSampler
 from Utils import EarlyStopping
 import pdb
+import timeit
 
 torch.manual_seed(33)
 np.random.seed(33)
@@ -96,16 +97,16 @@ class RunModel:
         if self.m_name == 'lenet5' and not self.is_bayesian:
             self.model = Lenet5(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
-            print(summary(self.model, (3, 32, 32)))
+            summary(self.model, (self.tr_b_sz, 3, 32, 32))
         elif self.m_name == 'alexnet' and not self.is_bayesian:
             self.model = AlexnetCifar(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
-            print(summary(self.model, (3, 32, 32)))
+            summary(self.model, (self.tr_b_sz, 3, 32, 32))
         # bayesian alexnet
         elif self.m_name == 'alexnet' and self.is_bayesian:
             self.model = BAlexnet(self.n_classes).to(DEVICE)
             t_param = sum(p.numel() for p in self.model.parameters())
-        
+            summary(self.model, (self.tr_b_sz, 3, 32, 32))
         elif self.m_name == 'VGG' and not self.is_bayesian:
             self.model = VGG(self.n_classes, self.i_channel, 'VGG19').to(DEVICE)
             # torch.nn.DataParallel(self.model.features)
@@ -209,9 +210,9 @@ class RunModel:
                                  + net_typ + '-' + self.optim + '.pkl'
         return (self.model, self.train_weight_path)
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='CNN self.models that use CIFAR10')
+def _initiate_arguments(parser):
+    
+    parser.add_argument('-config', help="configuration file *.yml", type=str, required=False, default="config.yml")
     parser.add_argument('-m', '--model', help='model name 1.lenet5 2.alexnet 3. VGG', default='lenet5')
     parser.add_argument('-d', '--dataset', help='dataset type', default='cifar10')
     parser.add_argument('-e', '--epochs', help='number of epochs', default=150, type=int)
@@ -220,8 +221,13 @@ if __name__ == '__main__':
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
     parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
     parser.add_argument('-r', '--resume', help='if you want to resume from an epoch', action='store_true')
-
     args = parser.parse_args()
+    return args 
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    args = _initiate_arguments(parser)
+
     run_model = RunModel(args)
     patience = 10
     start_epoch = 0
@@ -229,6 +235,7 @@ if __name__ == '__main__':
         start_epoch = run_model.start_epoch
         
     early_stopping = EarlyStopping(patience=patience, verbose=True, typ='loss')
+    start = timeit.default_timer()
     for e in range(start_epoch, args.epochs):
         avg_train_loss, train_accuracy = run_model.train()
         if args.is_valid:
@@ -245,3 +252,5 @@ if __name__ == '__main__':
         else:
             print('Epoch:{}, AvgTrainLoss:{:.3f}, TrainAccuracy:{:.2f}, TestAccuracy:{:.2f}'
                 .format(e, avg_train_loss, train_accuracy, tst_accuracy))
+    stop = timeit.default_timer()
+    print('Time: ', stop - start) 
