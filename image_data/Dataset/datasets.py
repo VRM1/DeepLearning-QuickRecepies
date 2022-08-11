@@ -8,7 +8,7 @@ from torch import nn
 
 HOME = expanduser('~')
 # D_PTH = HOME + '/Documents/DataRepo'
-D_PTH = '/media/6TB_Volume'
+D_PTH = '/data/DataRepo'
 
 
 def get_mnist():

@@ -103,19 +103,12 @@ class RunModel:
             self.model = Lenet5(self.n_classes)
             summary(self.model, (self.tr_b_sz, 3, 32, 32))
             t_param = sum(p.numel() for p in self.model.parameters())
-<<<<<<< HEAD:image_data/main.py
-            summary(self.model, (self.tr_b_sz, 3, 32, 32))
-=======
             self.model = self.model.to(DEVICE)
->>>>>>> 4cb04f183435e75f6c57ce376baa75151fbc7f69:main.py
         elif self.m_name == 'alexnet' and not self.is_bayesian:
             self.model = AlexnetCifar(self.n_classes)
             t_param = sum(p.numel() for p in self.model.parameters())
             summary(self.model, (self.tr_b_sz, 3, 32, 32))
-<<<<<<< HEAD:image_data/main.py
-=======
             self.model = self.model.to(DEVICE)
->>>>>>> 4cb04f183435e75f6c57ce376baa75151fbc7f69:main.py
         # bayesian alexnet
         elif self.m_name == 'alexnet' and self.is_bayesian:
             self.model = BAlexnet(self.n_classes).to(DEVICE)
@@ -235,22 +228,12 @@ def _initiate_arguments(parser):
     parser.add_argument('-ba', '--is_bayesian', help='to use bayesian layer or not', action='store_true')
     parser.add_argument('-v', '--is_valid', help='whether to use validation or not', action='store_true')
     parser.add_argument('-r', '--resume', help='if you want to resume from an epoch', action='store_true')
-<<<<<<< HEAD:image_data/main.py
-    args = parser.parse_args()
-    return args 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    args = _initiate_arguments(parser)
-
-=======
     parser.add_argument('-dev', '--device', help='device type can be cpu or gpu or mps (for M1 mac only) \
         If not arugment is given, the program auto-detects', default=None)
 
     args = parser.parse_args()
     if args.device:
         DEVICE = torch.device(args.device)
->>>>>>> 4cb04f183435e75f6c57ce376baa75151fbc7f69:main.py
     run_model = RunModel(args)
 
     patience = 10
