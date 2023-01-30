@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torch import nn
 
 HOME = expanduser('~')
-D_PTH = '/media/6TB_Volume/DataRepo'
+D_PTH = '{}/Downloads'.format(HOME)
 
 
 def get_mnist():
