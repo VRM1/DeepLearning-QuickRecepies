@@ -5,3 +5,4 @@ datasets
 *.DS_Store
 __pycache__
 trained_weights
+.vscode/launch.json
